@@ -222,7 +222,7 @@ struct ShortcutsTab: View {
                     Button("Restore Defaults") { Prefs.resetShortcuts(); note.v = "" }
                 } label: {
                     Text("Shortcuts")
-                    Text(note.v.isEmpty ? "Defaults are your Rectangle keys: ⌃⌥⌘ + arrows, ↩ ' C \\ 1–4 [ ]." : note.v)
+                    Text(note.v.isEmpty ? "Defaults: ⌃⌥⌘ + arrows, ↩ ' C \\ 1–4 [ ]." : note.v)
                 }
             }
             ForEach(Action.Group.allCases, id: \.self) { g in
@@ -244,7 +244,7 @@ struct LayoutTab: View {
     @AppStorage(K.gapsOnMaximize, store: Prefs.d) private var gapsOnMaximize = true
     @AppStorage(K.centerHalfCycles, store: Prefs.d) private var centerHalfCycles = false
     @AppStorage(K.repeatedMaximizeRestores, store: Prefs.d) private var maximizeRestores = false
-    @AppStorage(K.centeredDirectionalMove, store: Prefs.d) private var centeredMove = true
+    @AppStorage(K.centerOnEdgeMove, store: Prefs.d) private var centeredMove = true
 
     private func percent(_ key: String) -> Binding<Double> {
         Binding(get: { (Prefs.d.double(forKey: key) * 100).rounded() }, set: { Prefs.d.set($0 / 100, forKey: key) })

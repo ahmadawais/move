@@ -1,7 +1,7 @@
 import Foundation
 
-/// Every window action. The raw value is the preferences key for its shortcut and matches Rectangle's names,
-/// so `move://execute-action?name=<kebab-case>` takes the same names as `rectangle://`.
+/// Every window action. The raw value is the preferences key for its shortcut; the kebab-case form is its
+/// URL name: `move://execute-action?name=left-half`.
 nonisolated public enum Action: String, CaseIterable, Sendable {
     // Halves
     case leftHalf, rightHalf, centerHalf, topHalf, bottomHalf

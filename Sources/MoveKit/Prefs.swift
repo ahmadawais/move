@@ -1,28 +1,28 @@
 import AppKit
 
-/// Preference keys. Shortcut keys are the action names (`leftHalf` …), in Rectangle's format.
+/// Preference keys. Each shortcut is stored under its action name (`leftHalf` …).
 enum K {
     static let showMenuIcon = "showMenuIcon"
-    static let launchAtLogin = "launchOnLogin"
-    static let mode = "subsequentExecutionMode"
+    static let launchAtLogin = "launchAtLogin"
+    static let mode = "repeatMode"
     static let gap = "gapSize"
     static let edgeTop = "screenEdgeGapTop", edgeBottom = "screenEdgeGapBottom"
     static let edgeLeft = "screenEdgeGapLeft", edgeRight = "screenEdgeGapRight"
     static let almostWidth = "almostMaximizeWidth", almostHeight = "almostMaximizeHeight"
-    static let sizeStep = "sizeOffset", widthStep = "widthStepSize"
+    static let sizeStep = "sizeStep", widthStep = "widthStep"
     static let cycleSizes = "cycleSizes"
     static let centerHalfCycles = "centerHalfCycles"
-    static let centeredDirectionalMove = "centeredDirectionalMove"
-    static let repeatedMaximizeRestores = "repeatedMaximizeRestoresPrevious"
-    static let gapsOnMaximize = "applyGapsToMaximize"
+    static let centerOnEdgeMove = "centerOnEdgeMove"
+    static let repeatedMaximizeRestores = "maximizeAgainRestores"
+    static let gapsOnMaximize = "gapsOnMaximize"
     static let specifiedWidth = "specifiedWidth", specifiedHeight = "specifiedHeight"
     static let moveCursorAcrossDisplays = "moveCursorAcrossDisplays"
     static let moveCursor = "moveCursor"
-    static let ignoredApps = "disabledApps"
+    static let ignoredApps = "ignoredApps"
     static let lastRelaunch = "lastRelaunch"
 }
 
-/// A key + modifiers, stored like Rectangle (`{keyCode, modifierFlags}` with NSEvent flag bits).
+/// A key + modifiers, stored as `{keyCode, modifierFlags}` (NSEvent flag bits).
 public struct Shortcut: Equatable, Hashable, Sendable {
     public var keyCode: Int
     public var modifiers: UInt   // NSEvent.ModifierFlags raw value (device-independent bits only)
@@ -50,7 +50,7 @@ public enum Prefs {
 
     static let hyper: NSEvent.ModifierFlags = [.control, .option, .command]
 
-    /// Ahmad's Rectangle shortcuts (~/.dotfiles/rectangle/com.knollsoft.Rectangle.plist): ⌃⌥⌘ + key.
+    /// Defaults: ⌃⌥⌘ + a key, one hand on the arrows.
     public static let defaultShortcuts: [Action: Shortcut] = [
         .leftHalf: Shortcut(keyCode: 123, modifiers: hyper),        // ←
         .rightHalf: Shortcut(keyCode: 124, modifiers: hyper),       // →
@@ -72,14 +72,14 @@ public enum Prefs {
         var defaults: [String: Any] = [
             K.showMenuIcon: true,
             K.launchAtLogin: true,
-            K.mode: RepeatMode.nextDisplay.rawValue,   // his Rectangle setting
+            K.mode: RepeatMode.nextDisplay.rawValue,   // pressing a half again moves on to the next display
             K.gap: 0.0,
             K.edgeTop: 0.0, K.edgeBottom: 0.0, K.edgeLeft: 0.0, K.edgeRight: 0.0,
             K.almostWidth: 0.9, K.almostHeight: 0.9,
             K.sizeStep: 30.0, K.widthStep: 30.0,
             K.cycleSizes: [0.5, 2.0 / 3, 1.0 / 3],
             K.centerHalfCycles: false,
-            K.centeredDirectionalMove: true,
+            K.centerOnEdgeMove: true,
             K.repeatedMaximizeRestores: false,
             K.gapsOnMaximize: true,
             K.specifiedWidth: 1680.0, K.specifiedHeight: 1050.0,
@@ -154,7 +154,7 @@ public enum Prefs {
         let sizes = (d.array(forKey: K.cycleSizes) as? [Double] ?? []).map { CGFloat($0) }.filter { $0 > 0 && $0 < 1 }
         c.cycleSizes = sizes.isEmpty ? [0.5] : sizes
         c.centerHalfCycles = d.bool(forKey: K.centerHalfCycles)
-        c.centeredDirectionalMove = d.bool(forKey: K.centeredDirectionalMove)
+        c.centerOnEdgeMove = d.bool(forKey: K.centerOnEdgeMove)
         c.repeatedMaximizeRestores = d.bool(forKey: K.repeatedMaximizeRestores)
         c.gapsOnMaximize = d.bool(forKey: K.gapsOnMaximize)
         c.specified = CGSize(width: max(0.1, cg(K.specifiedWidth)), height: max(0.1, cg(K.specifiedHeight)))

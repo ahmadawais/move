@@ -1,0 +1,54 @@
+# Push a tag like v1.0.0 → tests, universal build, signed provenance, GitHub release.
+# Assets: Move.zip (ad-hoc signed app), make-cert.sh, SHA256SUMS. scripts/get.sh installs them and signs locally.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write       # create the release
+  id-token: write       # sign the build provenance (Sigstore)
+  attestations: write   # store it, so `gh attestation verify` works
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Test
+        run: ./scripts/test.sh
+
+      - name: Build (universal, ad-hoc signed)
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $tag" Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Resources/Info.plist
+          UNIVERSAL=1 SIGN_ID=- ./scripts/build.sh
+          lipo -archs build/Move.app/Contents/MacOS/Move
+
+      - name: Package
+        run: |
+          ditto -c -k --keepParent build/Move.app Move.zip
+          cp scripts/make-cert.sh make-cert.sh
+          shasum -a 256 Move.zip make-cert.sh > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            Move.zip
+            make-cert.sh
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" Move.zip make-cert.sh SHA256SUMS \
+            --title "Move ${GITHUB_REF_NAME}" --generate-notes

@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// What a repeated shortcut does (Rectangle's "subsequentExecutionMode", same raw values).
+/// What a repeated shortcut does.
 nonisolated public enum RepeatMode: Int, CaseIterable, Sendable {
     case cycleSizes = 0          // ½ → ⅔ → ⅓ on halves and corners (Spectacle)
     case nextDisplay = 1         // halves (and edges) move on to the adjacent display
@@ -41,7 +41,7 @@ nonisolated public struct Config: Equatable, Sendable {
     /// Fractions repeated halves/corners cycle through, first is ½.
     public var cycleSizes: [CGFloat] = [1.0 / 2, 2.0 / 3, 1.0 / 3]
     public var centerHalfCycles = false
-    public var centeredDirectionalMove = true
+    public var centerOnEdgeMove = true
     public var repeatedMaximizeRestores = false
     public var gapsOnMaximize = true
     public var specified = CGSize(width: 1680, height: 1050)
@@ -127,7 +127,7 @@ nonisolated public struct Engine {
         return best
     }
 
-    /// Top-to-bottom, then left-to-right (Rectangle's default ordering).
+    /// Top-to-bottom, then left-to-right.
     public static func ordered(_ displays: [Display]) -> [Display] {
         displays.sorted { a, b in
             if b.frame.maxY <= a.frame.minY { return true }
@@ -264,7 +264,7 @@ nonisolated public struct Engine {
         case .moveUp, .moveDown:
             var r = window
             r.origin.y = a == .moveUp ? f.maxY - r.height : f.minY
-            if config.centeredDirectionalMove { r.origin.x = ((f.width - r.width) / 2).rounded() + f.minX }
+            if config.centerOnEdgeMove { r.origin.x = ((f.width - r.width) / 2).rounded() + f.minX }
             if window.width >= f.width { r.size.width = f.width; r.origin.x = f.minX }
             return out(r, a)
         case .nextDisplay, .previousDisplay:
@@ -516,7 +516,7 @@ nonisolated public struct Engine {
         let f = area(target)
         var r = window
         r.origin.x = action == .moveRight ? f.maxX - r.width : f.minX
-        if config.centeredDirectionalMove { r.origin.y = ((f.height - r.height) / 2).rounded() + f.minY }
+        if config.centerOnEdgeMove { r.origin.y = ((f.height - r.height) / 2).rounded() + f.minY }
         if window.height >= f.height { r.size.height = f.height; r.origin.y = f.minY }
         return out(r, action, display: target)
     }
@@ -525,9 +525,8 @@ nonisolated public struct Engine {
 
     func toDisplay(_ i: Int, action: Action) -> Outcome {
         let src = area(current), dst = area(i)
-        let t = DisplayTransfer.transferredRect(window: window, source: src, destination: dst,
-                                                edgeTolerance: 4 + config.gap)
-        if t.sharedEdges == .all { return out(dst, .maximize, display: i) }
+        let t = Carry.rect(window, from: src, to: dst, tolerance: 4 + config.gap)
+        if t.fills { return out(dst, .maximize, display: i) }
         return out(t.rect, action, display: i)
     }
 }
@@ -535,7 +534,7 @@ nonisolated public struct Engine {
 // MARK: - Shapes
 
 nonisolated enum Geometry {
-    /// Rectangle's rounding: floor with a hair of tolerance.
+    /// Floor, with a hair of tolerance so 503.9999 is 504.
     static func fl(_ v: CGFloat) -> CGFloat { (v + 0.0001).rounded(.down) }
 
     static func half(_ f: CGRect, side: Action, fraction: CGFloat = 0.5) -> CGRect {
@@ -657,68 +656,32 @@ nonisolated struct Grid {
     }
 }
 
-// MARK: - Display transfer (ported from Rectangle's DisplayTransfer)
+// MARK: - Moving to another display
 
-nonisolated public struct Edges: OptionSet, Sendable {
-    public let rawValue: Int
-    public init(rawValue: Int) { self.rawValue = rawValue }
-    public static let left = Edges(rawValue: 1), right = Edges(rawValue: 2), top = Edges(rawValue: 4), bottom = Edges(rawValue: 8)
-    public static let all: Edges = [.left, .right, .top, .bottom]
-}
-
-/// Moves a window to another display keeping the edges it touches and its relative place.
-nonisolated public enum DisplayTransfer {
-    enum Contact { case neither, start, end, both
-        var oneEdge: Bool { self == .start || self == .end }
+/// Carries a window to another display, one axis at a time. A window that spans its display (within
+/// `tolerance` of both edges) spans the new one, keeping its insets. Any other window keeps its size
+/// (shrunk to fit) and its place in the free space: flush left stays flush left, centered stays centered,
+/// a third of the way across stays a third of the way across.
+nonisolated public enum Carry {
+    public static func rect(_ window: CGRect, from src: CGRect, to dst: CGRect,
+                            tolerance: CGFloat = 4) -> (rect: CGRect, fills: Bool) {
+        guard src.width > 0, src.height > 0, dst.width > 0, dst.height > 0 else { return (window, false) }
+        let x = axis(window.minX, window.width, src.minX, src.width, dst.minX, dst.width, tolerance)
+        let y = axis(window.minY, window.height, src.minY, src.height, dst.minY, dst.height, tolerance)
+        return (CGRect(x: x.origin, y: y.origin, width: x.length, height: y.length), x.spans && y.spans)
     }
-    typealias Span = (origin: CGFloat, length: CGFloat)
 
-    public static func transferredRect(window: CGRect, source: CGRect, destination: CGRect,
-                                       edgeTolerance: CGFloat = 4) -> (rect: CGRect, sharedEdges: Edges) {
-        guard source.width > 0, source.height > 0, destination.width > 0, destination.height > 0 else {
-            return (window, [])
+    static func axis(_ origin: CGFloat, _ length: CGFloat, _ srcOrigin: CGFloat, _ srcLength: CGFloat,
+                     _ dstOrigin: CGFloat, _ dstLength: CGFloat, _ tolerance: CGFloat)
+        -> (origin: CGFloat, length: CGFloat, spans: Bool) {
+        let before = origin - srcOrigin, after = srcOrigin + srcLength - (origin + length)
+        if before <= tolerance, after <= tolerance {
+            let a = min(max(before, 0), dstLength / 4), b = min(max(after, 0), dstLength / 4)
+            return (dstOrigin + a, dstLength - a - b, true)
         }
-        var h = transfer((window.minX, window.width), (source.minX, source.width), (destination.minX, destination.width), edgeTolerance)
-        var v = transfer((window.minY, window.height), (source.minY, source.height), (destination.minY, destination.height), edgeTolerance)
-        let turns = (source.width > source.height && destination.height > destination.width)
-            || (source.height > source.width && destination.width > destination.height)
-        if turns {
-            if h.contact == .both, v.contact.oneEdge {
-                h.span = centered(window.width, on: h.span, destination: (destination.minX, destination.width))
-            } else if v.contact == .both, h.contact.oneEdge {
-                v.span = centered(window.height, on: v.span, destination: (destination.minY, destination.height))
-            }
-        }
-        var edges: Edges = []
-        switch h.contact { case .start: edges.insert(.left); case .end: edges.insert(.right)
-        case .both: edges.formUnion([.left, .right]); case .neither: break }
-        // Rectangle's vertical "start" is the lower edge in Cocoa coordinates; it names it top. Kept as is.
-        switch v.contact { case .start: edges.insert(.top); case .end: edges.insert(.bottom)
-        case .both: edges.formUnion([.top, .bottom]); case .neither: break }
-        return (CGRect(x: h.span.origin, y: v.span.origin, width: h.span.length, height: v.span.length), edges)
+        let fit = min(length, dstLength)
+        let free = max(before, 0) + max(after, 0)
+        let share = free > 0 ? max(before, 0) / free : 0.5
+        return ((dstOrigin + (dstLength - fit) * share).rounded(.down), fit, false)
     }
-
-    static func centered(_ length: CGFloat, on spanned: Span, destination: Span) -> Span {
-        guard length < spanned.length else { return spanned }
-        return (destination.origin + (destination.length - length) / 2, length)
-    }
-
-    static func transfer(_ window: Span, _ source: Span, _ destination: Span, _ tol: CGFloat) -> (span: Span, contact: Contact) {
-        let startInset = window.origin - source.origin
-        let endInset = (source.origin + source.length) - (window.origin + window.length)
-        let atStart = startInset <= tol, atEnd = endInset <= tol
-        if atStart, atEnd {
-            let s = clamp(startInset, 0, destination.length / 2), e = clamp(endInset, 0, destination.length / 2)
-            return ((destination.origin + s, destination.length - s - e), .both)
-        }
-        let length = min(window.length, destination.length)
-        let slack = destination.length - length
-        if atStart { return ((destination.origin + clamp(startInset, 0, slack), length), .start) }
-        if atEnd { return ((destination.origin + destination.length - length - clamp(endInset, 0, slack), length), .end) }
-        let center = (window.origin + window.length / 2 - source.origin) / source.length
-        let origin = destination.origin + center * destination.length - length / 2
-        return ((clamp(origin, destination.origin, destination.origin + slack), length), .neither)
-    }
-
-    static func clamp(_ v: CGFloat, _ lo: CGFloat, _ hi: CGFloat) -> CGFloat { min(max(v, lo), hi) }
 }

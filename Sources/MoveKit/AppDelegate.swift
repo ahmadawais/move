@@ -63,7 +63,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
     enum URLCommand: Equatable { case action(Action), ignore(String?), unignore(String?) }
 
     static func parse(_ url: URL) -> URLCommand? {
-        guard ["move", "rectangle"].contains(url.scheme?.lowercased() ?? ""),
+        guard url.scheme?.lowercased() == "move",
               let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
               let name = items.first(where: { $0.name == "name" })?.value else { return nil }
         let bundle = items.first(where: { $0.name == "app-bundle-id" })?.value

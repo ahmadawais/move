@@ -4,47 +4,54 @@
 
 <p align="center">Keyboard window manager for macOS. Private, no network, one permission.</p>
 
-Move snaps windows to halves, thirds, fourths, corners and grids with global shortcuts. It does what
-[Rectangle](https://github.com/rxhanson/Rectangle) does with the keyboard, rebuilt from scratch in about
-2,000 lines of Swift, with no dependencies and nothing that phones home.
+Move snaps windows to halves, thirds, fourths, corners and grids with global shortcuts. About 2,000 lines of
+Swift, no dependencies, nothing that phones home.
 
-## Why
+## Private by design
 
-| | Move | Rectangle |
-|---|---|---|
-| Network | **Blocked by the kernel.** At launch Move puts itself in a sandbox profile that refuses every IP connection and DNS lookup, and that it cannot lift | Sparkle updater checks `rectangleapp.com` |
-| Permissions | Accessibility only (to move other apps' windows) | Accessibility |
-| Global shortcuts | Carbon hotkeys: no Input Monitoring | MASShortcut (also Carbon) |
-| Updates, analytics, crash reports | None | Sparkle |
-| Dependencies | None | Sparkle, MASShortcut |
-| Data | Preferences on your Mac, nothing else | Same |
-| Logs | Action names and window frames only, never titles or app content | |
+- **No network.** At launch Move puts itself in a kernel sandbox profile that refuses every IP connection and
+  DNS lookup, and that it can't lift. Not a promise: the kernel enforces it.
+- **One permission**, Accessibility, to move other apps' windows. Global shortcuts are Carbon hotkeys, so no
+  Input Monitoring.
+- **No updater, analytics or crash reports.** No dependencies.
+- **Your data stays put.** Settings live in `~/Library/Preferences/com.ahmadawais.move.plist`. Logs carry action
+  names and window frames, never window titles or app content.
 
-## Install (free, no Apple Developer account)
+## Install
 
-Apple charges $99 a year to notarize apps. Move skips that: you build it on your Mac and it's signed
-locally, so Gatekeeper never sees a download to quarantine.
+Apple charges $99 a year to notarize apps. Move skips that: the app is signed on your Mac, by you, and it
+never carries the download flag Gatekeeper checks. Two ways, same result.
+
+**1. Download the release (no Xcode):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ahmadawais/move/main/scripts/get.sh | bash
+```
+
+[`get.sh`](scripts/get.sh) downloads the latest [release](https://github.com/ahmadawais/move/releases),
+checks its SHA-256 sums, signs it with a certificate it creates in your login keychain (once; macOS asks for
+your password), and installs it to `/Applications`. Run it again to update. With the
+[GitHub CLI](https://cli.github.com) signed in, it also checks the build provenance: proof the zip was built by
+this repo's [release workflow](.github/workflows/release.yml) from the tagged commit, not uploaded by hand.
+Check it yourself any time with `gh attestation verify Move.zip --repo ahmadawais/move`.
+
+Prefer reading before running? `curl -fsSLO https://raw.githubusercontent.com/ahmadawais/move/main/scripts/get.sh`,
+read it, then `bash get.sh`.
+
+**2. Build from source** (Xcode Command Line Tools: `xcode-select --install`):
 
 ```bash
 git clone https://github.com/ahmadawais/move.git && cd move
-./scripts/install.sh          # builds, copies to /Applications, launches
+./scripts/make-cert.sh        # once per Mac: the local signing certificate
+./scripts/install.sh          # builds, signs, copies to /Applications, launches
 ```
 
-Needs the Xcode Command Line Tools (`xcode-select --install`). Full Xcode isn't needed.
+Then allow it once: **System Settings → Privacy & Security → Accessibility → Move**. Move relaunches by itself.
 
-Then allow it once: **System Settings → Privacy & Security → Accessibility → Move**. Move relaunches
-by itself when you do.
-
-**Keep that permission across rebuilds (optional, recommended):**
-
-```bash
-./scripts/make-cert.sh        # once per Mac: a self-signed "Move Local Signing" certificate
-./scripts/install.sh
-```
-
-Without the certificate Move is signed ad-hoc. It works the same, but macOS ties the Accessibility
-permission to the exact build, so after each rebuild you turn Move off and on again in that list.
-The certificate's private key never leaves your login keychain, and only `codesign` can use it.
+**Why the certificate?** macOS ties the Accessibility permission to the app's signature. The local certificate
+makes that signature the same on every update, so the permission stays. Its private key never leaves your
+login keychain and only `codesign` may use it. Skip it (`MOVE_ADHOC=1` for `get.sh`) and Move is signed
+ad-hoc: it works the same, but you turn it off and on again in that list after each update.
 
 ## Shortcuts
 
@@ -98,8 +105,8 @@ open -g "move://execute-task?name=ignore-app&app-bundle-id=com.apple.Safari"
 open -g "move://execute-task?name=unignore-app"
 ```
 
-Action names are Rectangle's (`first-fourth`, `top-left-sixth`, `next-display` …), so Rectangle scripts work by
-changing `rectangle://` to `move://`.
+Every action has a kebab-case name: its title in lowercase with dashes (`first-fourth`, `top-left-sixth`,
+`next-display` …).
 
 ## Not included
 
@@ -111,9 +118,10 @@ windows), mouse-button shortcuts, title-bar double-click, window animation, JSON
 ```bash
 ./scripts/test.sh             # Swift Testing: engine, controller, prefs, URLs, hotkeys, settings renders
 ./scripts/build.sh            # build/Move.app
+git tag vX.Y.Z && git push --tags   # CI: test, universal build, provenance, GitHub release
 ```
 
-Settings renders land in `.build/renders/` for review. 26 tests are Rectangle's `DisplayTransferTests`, ported 1:1.
+Settings renders land in `.build/renders/` for review.
 
 ```
 Sources/Move/main.swift        app entry
@@ -131,4 +139,4 @@ Sources/MoveKit/
 
 ## License
 
-MIT. Ported parts of Rectangle keep its MIT notice, see LICENSE.
+MIT.

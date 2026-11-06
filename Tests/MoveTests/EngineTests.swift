@@ -328,7 +328,7 @@ func presses(_ a: Action, _ n: Int, displays: [Display] = [laptop], start: Int =
         #expect(rect(.halveHeightDown, big) == CGRect(x: 100, y: 100, width: 1000, height: 400))
         #expect(rect(.doubleWidthLeft) == CGRect(x: -500, y: 200, width: 1200, height: 400))
         #expect(rect(.doubleHeightDown) == CGRect(x: 100, y: -200, width: 600, height: 800))
-        // Halving below a quarter of the screen does nothing (Rectangle's minimum).
+        // Halving below a quarter of the screen does nothing (the minimum).
         #expect(rect(.halveWidthLeft) == CGRect(x: 100, y: 200, width: 600, height: 400))
     }
 
@@ -337,7 +337,7 @@ func presses(_ a: Action, _ n: Int, displays: [Display] = [laptop], start: Int =
         #expect(rect(.moveRight) == CGRect(x: 912, y: 305, width: 600, height: 400))
         #expect(rect(.moveUp) == CGRect(x: 456, y: 549, width: 600, height: 400))
         #expect(rect(.moveDown) == CGRect(x: 456, y: 60, width: 600, height: 400))
-        #expect(rect(.moveLeft, engine { $0.centeredDirectionalMove = false }) == CGRect(x: 0, y: 200, width: 600, height: 400))
+        #expect(rect(.moveLeft, engine { $0.centerOnEdgeMove = false }) == CGRect(x: 0, y: 200, width: 600, height: 400))
     }
 
     @Test func moveRightRepeatedCrossesDisplays() {
@@ -427,8 +427,11 @@ func presses(_ a: Action, _ n: Int, displays: [Display] = [laptop], start: Int =
         #expect(!a.title.isEmpty)
     }
 
-    @Test func rectangleURLNamesAllWork() {
-        // From Rectangle's README "Execute an action by URL" (single-window actions).
+    @Test func everyActionRoundTripsThroughItsURLName() {
+        for a in Action.allCases { #expect(Action(urlName: a.urlName) == a, "\(a)") }
+    }
+
+    @Test func urlNamesScriptsUse() {
         let names = "left-half right-half center-half top-half bottom-half top-left top-right bottom-left bottom-right first-third center-third last-third first-two-thirds last-two-thirds maximize almost-maximize maximize-height smaller larger center center-prominently restore next-display previous-display move-left move-right move-up move-down first-fourth second-fourth third-fourth last-fourth first-three-fourths last-three-fourths top-left-sixth top-center-sixth top-right-sixth bottom-left-sixth bottom-center-sixth bottom-right-sixth specified top-left-ninth top-center-ninth top-right-ninth middle-left-ninth middle-center-ninth middle-right-ninth bottom-left-ninth bottom-center-ninth bottom-right-ninth top-left-third top-right-third bottom-left-third bottom-right-third top-left-eighth top-center-left-eighth top-center-right-eighth top-right-eighth bottom-left-eighth bottom-center-left-eighth bottom-center-right-eighth bottom-right-eighth"
         for n in names.split(separator: " ") { #expect(Action(urlName: String(n)) != nil, "\(n)") }
     }

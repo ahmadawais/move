@@ -13,8 +13,11 @@ if [ -z "${SIGN_ID:-}" ]; then
     if security find-certificate -c "$id" > /dev/null 2>&1; then SIGN_ID="$id"; break; fi
   done
 fi
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Move"
+# UNIVERSAL=1: one binary for Apple silicon and Intel (needs full Xcode; release CI uses it).
+ARCH=()
+if [ "${UNIVERSAL:-}" = 1 ]; then ARCH=(--arch arm64 --arch x86_64); fi
+swift build -c release ${ARCH[@]+"${ARCH[@]}"}
+BIN="$(swift build -c release ${ARCH[@]+"${ARCH[@]}"} --show-bin-path)/Move"
 if [ ! -f Resources/AppIcon.icns ]; then
   swift scripts/make-icon.swift && iconutil -c icns Resources/AppIcon.iconset -o Resources/AppIcon.icns
 fi

@@ -120,7 +120,7 @@ final class AXWindow: Placeable {
 
     /// Apps with AXEnhancedUserInterface on (set by assistive tools, Chromium) animate and fight frame
     /// changes. Turn it off while moving; turn it back on afterwards except for Chromium browsers,
-    /// where it only costs performance (Rectangle's "automatic" behaviour).
+    /// where leaving it on only costs performance.
     private func withEnhancedUIOff(_ body: () -> Void) {
         let attr = "AXEnhancedUserInterface" as CFString
         var v: CFTypeRef?

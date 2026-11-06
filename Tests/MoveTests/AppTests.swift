@@ -40,7 +40,7 @@ extension SharedState {
     struct PrefsTests {
         init() { Env.prefs() }
 
-        @Test("Defaults are Ahmad's Rectangle setup")
+        @Test("Defaults: 14 ⌃⌥⌘ shortcuts, next display on repeat")
         func defaults() {
             #expect(Prefs.mode == .nextDisplay)
             #expect(Prefs.showMenuIcon)
@@ -50,20 +50,7 @@ extension SharedState {
             #expect(s[.leftHalf].map(KeyName.display) == "⌃⌥⌘←")
             #expect(s[.maximize].map(KeyName.display) == "⌃⌥⌘↩")
             #expect(s[.center] == Shortcut(keyCode: 8, modifiers: [.control, .option, .command]))
-            #expect(s[.topLeft] == nil)    // cleared in his Rectangle
-        }
-
-        @Test("Defaults match ~/.dotfiles/rectangle plist when it's there")
-        func matchesDotfiles() throws {
-            let paths = ["/.dotfiles/backups/rectangle/com.knollsoft.Rectangle.plist",
-                         "/.dotfiles/rectangle/com.knollsoft.Rectangle.plist"]
-            guard let plist = paths.lazy.compactMap({ NSDictionary(contentsOfFile: NSHomeDirectory() + $0) as? [String: Any] }).first
-            else { return }
-            for a in Action.allCases {
-                guard let v = plist[a.rawValue] as? [String: Any] else { continue }
-                #expect(Shortcut(dict: v) == Prefs.shortcut(a), "\(a)")
-            }
-            #expect((plist["subsequentExecutionMode"] as? Int) == Prefs.mode.rawValue)
+            #expect(s[.topLeft] == nil)    // corners have no default
         }
 
         @Test func settingAShortcutTakesItFromTheOtherAction() {
@@ -222,7 +209,8 @@ extension SharedState {
     struct AppTests {
         @Test func urls() {
             #expect(AppDelegate.parse(URL(string: "move://execute-action?name=center-half")!) == .action(.centerHalf))
-            #expect(AppDelegate.parse(URL(string: "rectangle://execute-action?name=first-fourth")!) == .action(.firstFourth))
+            #expect(AppDelegate.parse(URL(string: "move://execute-action?name=firstFourth")!) == .action(.firstFourth))
+            #expect(AppDelegate.parse(URL(string: "other://execute-action?name=first-fourth")!) == nil)
             #expect(AppDelegate.parse(URL(string: "move://execute-task?name=ignore-app&app-bundle-id=com.apple.Safari")!)
                     == .ignore("com.apple.Safari"))
             #expect(AppDelegate.parse(URL(string: "move://execute-task?name=unignore-app")!) == .unignore(nil))
