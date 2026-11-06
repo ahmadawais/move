@@ -1,9 +1,13 @@
-# Push a tag like v1.0.0 → tests, universal build, signed provenance, GitHub release.
-# Assets: Move.zip (ad-hoc signed app), make-cert.sh, SHA256SUMS. scripts/get.sh installs them and signs locally.
+# Push a tag like v1.0.0 → tests, universal build, checksums, build provenance (public repos), GitHub release.
+# Assets: <App>.zip (ad-hoc signed), make-cert.sh (if the app has one), SHA256SUMS.
+# scripts/get.sh installs them and signs on the user's Mac.
 name: Release
 on:
   push:
     tags: ["v*"]
+
+env:
+  APP: Move
 
 permissions:
   contents: write       # create the release
@@ -19,36 +23,36 @@ jobs:
           persist-credentials: false
 
       - name: Toolchain
-        run: swift --version && xcodebuild -version && ls -d /Applications/Xcode*.app
+        run: swift --version && xcodebuild -version
 
       - name: Test
         run: ./scripts/test.sh
 
       - name: Build (universal, ad-hoc signed)
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $tag" Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${GITHUB_REF_NAME#v}" Resources/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" Resources/Info.plist
           UNIVERSAL=1 SIGN_ID=- ./scripts/build.sh
-          lipo -archs build/Move.app/Contents/MacOS/Move
+          lipo -archs "build/$APP.app/Contents/MacOS/$APP"
 
       - name: Package
         run: |
-          ditto -c -k --keepParent build/Move.app Move.zip
-          cp scripts/make-cert.sh make-cert.sh
-          shasum -a 256 Move.zip make-cert.sh > SHA256SUMS
+          ditto -c -k --keepParent "build/$APP.app" "$APP.zip"
+          files="$APP.zip"
+          if [ -f scripts/make-cert.sh ]; then cp scripts/make-cert.sh .; files="$files make-cert.sh"; fi
+          shasum -a 256 $files > SHA256SUMS
           cat SHA256SUMS
 
+      # GitHub offers artifact attestations on public repos (private ones need Enterprise Cloud).
       - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: |
-            Move.zip
-            make-cert.sh
+          subject-checksums: SHA256SUMS
 
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" Move.zip make-cert.sh SHA256SUMS \
-            --title "Move ${GITHUB_REF_NAME}" --generate-notes
+          gh release create "$GITHUB_REF_NAME" $(awk '{print $2}' SHA256SUMS) SHA256SUMS \
+            --title "$APP ${GITHUB_REF_NAME}" --generate-notes

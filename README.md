@@ -50,7 +50,7 @@ Then allow it once: **System Settings → Privacy & Security → Accessibility �
 
 **Why the certificate?** macOS ties the Accessibility permission to the app's signature. The local certificate
 makes that signature the same on every update, so the permission stays. Its private key never leaves your
-login keychain and only `codesign` may use it. Skip it (`MOVE_ADHOC=1` for `get.sh`) and Move is signed
+login keychain and only `codesign` may use it. Skip it (`LOCAL_ADHOC=1` for `get.sh`) and Move is signed
 ad-hoc: it works the same, but you turn it off and on again in that list after each update.
 
 ## Shortcuts
