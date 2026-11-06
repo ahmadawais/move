@@ -8,7 +8,8 @@ let package = Package(
     name: "Move",
     platforms: [.macOS(.v14)],
     targets: [
-        .target(name: "MoveKit", path: "Sources/MoveKit", swiftSettings: app),
+        .target(name: "CNoNetwork", path: "Sources/CNoNetwork"),   // sandbox_init, from <sandbox.h>
+        .target(name: "MoveKit", dependencies: ["CNoNetwork"], path: "Sources/MoveKit", swiftSettings: app),
         .executableTarget(name: "Move", dependencies: ["MoveKit"], path: "Sources/Move", swiftSettings: app),
         .testTarget(name: "MoveTests", dependencies: ["MoveKit"], path: "Tests/MoveTests", swiftSettings: app),
     ]

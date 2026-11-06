@@ -1,9 +1,6 @@
 import AppKit
 import ApplicationServices
 
-@_silgen_name("_AXUIElementGetWindow")
-private func _AXUIElementGetWindow(_ element: AXUIElement, _ id: UnsafeMutablePointer<CGWindowID>) -> AXError
-
 /// Something Move can read and place. The real one is an Accessibility window; tests use a fake.
 @MainActor protocol Placeable: AnyObject {
     var id: UInt32? { get }
@@ -53,12 +50,9 @@ final class AXWindow: Placeable {
         return v as? T
     }
 
-    var id: UInt32? {
-        var wid: CGWindowID = 0
-        if _AXUIElementGetWindow(element, &wid) == .success, wid != 0 { return wid }
-        // Stand-in id from the element's identity (stable for the window's life), high bit set.
-        return 0x8000_0000 | (UInt32(truncatingIfNeeded: CFHash(element)) & 0x7FFF_FFFF)
-    }
+    /// Identifies the window for restore history. Equal AX elements (same app, same window) hash equal, so
+    /// this is stable for the window's life; public API only.
+    var id: UInt32? { UInt32(truncatingIfNeeded: CFHash(element)) }
 
     var bundleID: String? { NSRunningApplication(processIdentifier: pid)?.bundleIdentifier }
 

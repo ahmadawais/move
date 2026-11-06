@@ -131,6 +131,7 @@ Sources/MoveKit/
   Controller.swift             focused window → engine → place, restore history
   Window.swift                 Accessibility window access, permission
   NoNetwork.swift              kernel sandbox profile: no networking
+Sources/CNoNetwork/             10 lines of C: calls sandbox_init from <sandbox.h>
   HotKeys.swift                Carbon global shortcuts, key names
   Prefs.swift                  settings and default shortcuts
   Settings.swift               SwiftUI settings window
