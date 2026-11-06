@@ -7,6 +7,8 @@ import UniformTypeIdentifiers
 final class Box<T>: ObservableObject {
     @Published var v: T
     init(_ v: T) { self.v = v }
+    // Swift 6.3.3 (Xcode 26.6) crashes inlining into this deinit in -O builds. Nothing to optimize here.
+    @_optimize(none) deinit {}
 }
 
 /// Toolbar-tab settings window. Golden ratio: short tabs 560 × 346 (width ÷ φ), long tabs 560 × 560.

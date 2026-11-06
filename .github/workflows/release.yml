@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
 
       - name: Toolchain
-        run: swift --version && xcodebuild -version
+        run: swift --version && xcodebuild -version && ls -d /Applications/Xcode*.app
 
       - name: Test
         run: ./scripts/test.sh
