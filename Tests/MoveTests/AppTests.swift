@@ -55,8 +55,10 @@ extension SharedState {
 
         @Test("Defaults match ~/.dotfiles/rectangle plist when it's there")
         func matchesDotfiles() throws {
-            let url = URL(fileURLWithPath: NSHomeDirectory() + "/.dotfiles/rectangle/com.knollsoft.Rectangle.plist")
-            guard let plist = NSDictionary(contentsOf: url) as? [String: Any] else { return }
+            let paths = ["/.dotfiles/backups/rectangle/com.knollsoft.Rectangle.plist",
+                         "/.dotfiles/rectangle/com.knollsoft.Rectangle.plist"]
+            guard let plist = paths.lazy.compactMap({ NSDictionary(contentsOfFile: NSHomeDirectory() + $0) as? [String: Any] }).first
+            else { return }
             for a in Action.allCases {
                 guard let v = plist[a.rawValue] as? [String: Any] else { continue }
                 #expect(Shortcut(dict: v) == Prefs.shortcut(a), "\(a)")

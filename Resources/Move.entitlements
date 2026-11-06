@@ -2,9 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- App Sandbox ON. No network entitlement: the kernel blocks every connection. -->
-	<key>com.apple.security.app-sandbox</key><true/>
-	<!-- Only for picking an app to ignore (NSOpenPanel). -->
-	<key>com.apple.security.files.user-selected.read-only</key><true/>
+	<!-- No entitlements. The App Sandbox is off because it blocks the Accessibility API
+	     (mach-lookup com.apple.axserver). Networking is blocked instead by a kernel sandbox
+	     profile Move applies to itself at launch: Sources/MoveKit/NoNetwork.swift. -->
 </dict>
 </plist>

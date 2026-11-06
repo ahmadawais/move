@@ -2,7 +2,7 @@
 
 <h1 align="center">Move</h1>
 
-<p align="center">Keyboard window manager for macOS. Private, sandboxed, no network, one permission.</p>
+<p align="center">Keyboard window manager for macOS. Private, no network, one permission.</p>
 
 Move snaps windows to halves, thirds, fourths, corners and grids with global shortcuts. It does what
 [Rectangle](https://github.com/rxhanson/Rectangle) does with the keyboard, rebuilt from scratch in about
@@ -12,8 +12,7 @@ Move snaps windows to halves, thirds, fourths, corners and grids with global sho
 
 | | Move | Rectangle |
 |---|---|---|
-| Network | **Blocked by the App Sandbox** (no `network.client` entitlement: the kernel refuses every connection) | Not sandboxed; Sparkle updater checks `rectangleapp.com` |
-| Sandbox | On | Off |
+| Network | **Blocked by the kernel.** At launch Move puts itself in a sandbox profile that refuses every IP connection and DNS lookup, and that it cannot lift | Sparkle updater checks `rectangleapp.com` |
 | Permissions | Accessibility only (to move other apps' windows) | Accessibility |
 | Global shortcuts | Carbon hotkeys: no Input Monitoring | MASShortcut (also Carbon) |
 | Updates, analytics, crash reports | None | Sparkle |
@@ -84,6 +83,13 @@ Thirds and fourths follow the display: columns on landscape, rows on portrait.
 - **Apps**: apps where Move's shortcuts are off (handy for apps that use the same keys).
 - **Advanced**: screen-edge gaps, cursor follows the window, privacy facts.
 
+## Why not the App Sandbox
+
+The App Sandbox blocks the Accessibility API (`deny mach-lookup com.apple.axserver`), so no sandboxed app can move
+another app's windows. Move uses a narrower kernel sandbox instead: everything is allowed except networking
+(`Sources/MoveKit/NoNetwork.swift`, a seven-line profile). `NoNetworkTests` run `curl`, `nc` and `host` under that exact
+profile and check that they fail. **Settings → Advanced → Privacy** shows whether it is active.
+
 ## Scripting
 
 ```bash
@@ -116,6 +122,7 @@ Sources/MoveKit/
   Action.swift                 the 132 actions, names, groups
   Controller.swift             focused window → engine → place, restore history
   Window.swift                 Accessibility window access, permission
+  NoNetwork.swift              kernel sandbox profile: no networking
   HotKeys.swift                Carbon global shortcuts, key names
   Prefs.swift                  settings and default shortcuts
   Settings.swift               SwiftUI settings window

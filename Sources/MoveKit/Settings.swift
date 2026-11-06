@@ -389,7 +389,7 @@ struct AdvancedTab: View {
                 Toggle("Center on the window after every action", isOn: $cursorAlways)
             }
             Section("Privacy") {
-                LabeledContent("Network") { Text("Blocked by the App Sandbox") }
+                LabeledContent("Network") { Text(NoNetwork.active ? "Blocked by the kernel" : "Not blocked, see Console") }
                 LabeledContent("Updates & analytics") { Text("None") }
                 LabeledContent("Permissions") { Text("Accessibility only") }
                 LabeledContent("Data") { Text("Settings on this Mac only") }

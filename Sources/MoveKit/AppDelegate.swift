@@ -45,7 +45,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate 
     // MARK: Actions
 
     func perform(_ a: Action) {
-        guard Permission.trusted else { NSSound.beep(); waitForPermission(); Permission.request(); return }
+        guard Permission.trusted else {
+            NSSound.beep()
+            if permissionTimer == nil { Permission.request() }   // macOS's prompt once, not on every press
+            waitForPermission()
+            return
+        }
         controller.run(a)
     }
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds build/Move.app (release, sandboxed, hardened runtime). No Apple Developer account needed.
+# Builds build/Move.app (release, hardened runtime, no network). No Apple Developer account needed.
 # Signing, in order:
 #   1. SIGN_ID="Your Identity" ./scripts/build.sh
 #   2. a "Move Local Signing" or "AA Local Code Signing" certificate in your keychain (scripts/make-cert.sh makes one):
