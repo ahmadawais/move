@@ -13,8 +13,11 @@ enum LoginItem {
         set { Prefs.d.set(newValue, forKey: key); apply() }
     }
 
-    /// Only the installed app registers (not build/ copies or the test runner).
-    static var installed: Bool { Bundle.main.bundlePath.hasPrefix("/Applications/") }
+    /// Only the installed app registers: not build/ copies, and not the test runner (which lives in
+    /// /Applications/Xcode.app on machines with Xcode).
+    static var installed: Bool {
+        Bundle.main.bundleIdentifier == "com.ahmadawais.move" && Bundle.main.bundlePath.hasPrefix("/Applications/")
+    }
 
     /// What to do for a given state; pure, so tests cover it.
     enum Step: Equatable { case register, unregister, nothing }
